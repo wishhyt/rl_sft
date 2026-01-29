@@ -499,20 +499,30 @@ class ParquetPickaPicDataset(IterableDataset):
         from datasets import load_dataset
         
         # Load dataset
+        # Load dataset
         try:
-            # Try loading as HuggingFace dataset
-            if "/" in self.dataset_path or not Path(self.dataset_path).exists():
+            # Check if path exists locally
+            path_obj = Path(self.dataset_path)
+            if path_obj.exists():
+                # Local file(s)
+                if path_obj.is_dir():
+                    dataset = load_dataset(
+                        "parquet",
+                        data_dir=self.dataset_path,
+                        split="train",
+                        streaming=True
+                    )
+                else:
+                    dataset = load_dataset(
+                        "parquet",
+                        data_files=self.dataset_path,
+                        split="train",
+                        streaming=True
+                    )
+            else:
                 # HuggingFace dataset name
                 dataset = load_dataset(
                     self.dataset_path,
-                    split="train",
-                    streaming=True  # Use streaming for large datasets
-                )
-            else:
-                # Local parquet file(s)
-                dataset = load_dataset(
-                    "parquet",
-                    data_files=self.dataset_path,
                     split="train",
                     streaming=True
                 )
