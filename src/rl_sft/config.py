@@ -74,6 +74,7 @@ class SamplingConfig:
     same_latent: bool = False
     eta: float = 0.0
     d_fusion: bool = False  # Enable D-Fusion sampling for validation
+    num_validation_images: int = 20  # Number of validation images to sample (DPO)
 
 
 @dataclass

@@ -1098,6 +1098,113 @@ def train_sft(config) -> None:
 # DPO Training
 # ==============================================================================
 
+@torch.no_grad()
+def log_validation(
+    config,
+    accelerator: Accelerator,
+    pipeline,
+    test_dataloader: torch.utils.data.DataLoader,
+    epoch: int,
+    global_step: int,
+) -> None:
+    """Run validation sampling on the start of the test set."""
+    if not accelerator.is_main_process or test_dataloader is None:
+        return
+
+    logger.info(f"Running validation at epoch {epoch}...", main_process_only=True)
+    
+    # Store original UNet state
+    unet = pipeline.unet
+    pipeline.unet.eval()
+    
+    # Collect prompts
+    prompts = []
+    num_samples = config.sampling.num_validation_images
+    
+    for batch in test_dataloader:
+        if isinstance(batch, dict) and "prompts" in batch:
+            # DpoBatch/PromptBatch format
+            batch_prompts = batch["prompts"]
+        elif hasattr(batch, "prompts"):
+            batch_prompts = batch.prompts
+        else:
+            # Fallback or standard DPO batch structure
+            # In data.py dpo_collate_fn returns DpoBatch which has .prompts
+            batch_prompts = batch.prompts
+            
+        prompts.extend(batch_prompts)
+        if len(prompts) >= num_samples:
+            break
+            
+    prompts = prompts[:num_samples]
+    if not prompts:
+        logger.warning("No prompts found for validation.")
+        pipeline.unet.train()
+        return
+
+    logger.info(f"Generating {len(prompts)} validation images...", main_process_only=True)
+    
+    images = []
+    # Generation loop
+    # We use the pipeline to generate. 
+    # Use config.sampling parameters for guidance etc.
+    generator = torch.Generator(device=accelerator.device).manual_seed(config.run.seed)
+    
+    for i, prompt in enumerate(prompts):
+        # Generate one by one or batch? Pipeline handles batches.
+        # But for simplicity and memory safety in validation, let's do small batches or one by one.
+        # Let's do batch size = sampling.test_batch_size if possible, or just 1.
+        # Simple loop 1 by 1 for safety and progress logging if needed, or just pipe call.
+        
+        # Pipeline expects list of prompts or single string.
+        # Let's batch them manually if list is long? 
+        # Pipeline handles list.
+        pass
+
+    # Actually better to batch generation
+    pipeline_args = {
+        "guidance_scale": config.sampling.eval_guidance_scale,
+        "num_inference_steps": config.sampling.eval_num_steps,
+        "generator": generator,
+        "eta": config.sampling.eta,
+        "output_type": "pil",
+    }
+    
+    # Generate in batches
+    eval_batch_size = config.sampling.test_batch_size
+    generated_images = []
+    
+    for i in range(0, len(prompts), eval_batch_size):
+        batch_prompts = prompts[i : i + eval_batch_size]
+        batch_images = pipeline(prompt=batch_prompts, **pipeline_args).images
+        generated_images.extend(batch_images)
+
+    # Log to WandB
+    if config.logging.use_wandb:
+        try:
+            import wandb
+            wandb_images = [
+                wandb.Image(image, caption=f"{epoch}_{i}: {prompt}") 
+                for i, (image, prompt) in enumerate(zip(generated_images, prompts))
+            ]
+            wandb.log({"validation/images": wandb_images, "epoch": epoch, "global_step": global_step})
+        except ImportError:
+            logger.warning("WandB not installed, skipping image logging.")
+    
+    # Also save locally? 
+    save_dir = Path(config.run.eval_output_dir) / f"epoch_{epoch}"
+    save_dir.mkdir(parents=True, exist_ok=True)
+    for i, (image, prompt) in enumerate(zip(generated_images, prompts)):
+        # Sanitized prompt for filename (truncate and remove bad chars)
+        safe_prompt = "".join([c if c.isalnum() else "_" for c in prompt])[:50]
+        image.save(save_dir / f"{i:03d}_{safe_prompt}.png")
+        
+    logger.info(f"Validation images saved to {save_dir}", main_process_only=True)
+    
+    # Restore UNet train mode
+    pipeline.unet.train()
+
+
 def train_dpo(config) -> None:
     """DPO (Direct Preference Optimization) training loop.
     
@@ -1116,8 +1223,8 @@ def train_dpo(config) -> None:
     # Save resolved config
     _save_config(config, config.run.output_dir)
 
-    logger.info("Building accelerator...", main_process_only=True)
     accelerator = _build_accelerator(config, 1)
+    logger.info("Building accelerator...", main_process_only=True)
 
     if config.precision.allow_tf32:
         torch.backends.cuda.matmul.allow_tf32 = True
@@ -1367,7 +1474,12 @@ def train_dpo(config) -> None:
         if epoch_losses:
             avg_epoch_loss = torch.mean(torch.stack(epoch_losses)).item()
             avg_implicit_acc = torch.mean(torch.stack(implicit_acc_list)).item()
+            avg_implicit_acc = torch.mean(torch.stack(implicit_acc_list)).item()
             progress_bar.set_postfix({"loss": avg_epoch_loss, "acc": avg_implicit_acc})
+
+        # Validation Loop
+        if config.run.eval_freq > 0 and epoch % config.run.eval_freq == 0:
+             log_validation(config, accelerator, pipeline, test_dataloader, epoch, global_step)
 
     # Save final model
     _save_state(config, accelerator, pipeline, unet, optimizer, config.run.num_epochs, global_step, lr_scheduler, is_final=True)
