@@ -7,7 +7,7 @@
   },
   "training": {
     "mode": "dpo",
-    "learning_rate": 1e-4,
+    "learning_rate": 0.0001,
     "num_inner_epochs": 1,
     "gradient_accumulation_steps": 4
   },
@@ -18,20 +18,24 @@
   },
   "dpo": {
     "beta_dpo": 5000.0,
-    "train_method": "diffusion-dpo"
+    "train_method": "kto",
+    "kto_lambda_d": 1.0,
+    "kto_lambda_u": 1.0
   },
   "sampling": {
-    "train_batch_size": 8,
+    "train_batch_size": 32,
     "resolution": 512
   },
   "run": {
-    "output_dir": "logs/dpo_pickapic_parquet",
+    "output_dir": "logs/multi_dpo/kto",
     "num_epochs": 10000,
-    "save_freq": 50
+    "save_freq": 40,
+    "eval_output_dir": "logs/multi_dpo/kto/eval"
   },
   "logging": {
-    "use_wandb": false,
-    "wandb_project": "sd14-dpo"
+    "use_wandb": true,
+    "wandb_project": "sd14-dpo",
+    "wandb_run_name": "kto"
   },
   "precision": {
     "mixed_precision": "bf16"

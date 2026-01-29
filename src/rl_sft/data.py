@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Iterable
 
 import torch
-import webdataset as wds
+# import webdataset as wds
 from torch.utils.data import DataLoader, Dataset, Sampler, IterableDataset
 from PIL import Image
 from accelerate.logging import get_logger
@@ -357,6 +357,7 @@ class CurriculumPickaPicDataset(IterableDataset):
             logger.info(f"Curriculum updated: Level {self.current_group_idx}, Min Margin {self.thresholds[self.current_group_idx]:.4f}", main_process_only=True)
 
     def __iter__(self):
+        import webdataset as wds
         import glob
         import io
         
@@ -497,22 +498,35 @@ class ParquetPickaPicDataset(IterableDataset):
     def __iter__(self):
         import io
         from datasets import load_dataset
+        import torch
         
+        # Resolve path and check if local
+        p = Path(self.dataset_path)
+        is_local = p.exists()
+        
+        if is_local and p.is_dir():
+            # Check for standard PickaPic-v2 structure with 'data' subfolder
+            data_dir = p / "data"
+            if data_dir.is_dir():
+                data_files = str(data_dir / "*.parquet")
+            else:
+                data_files = str(p / "*.parquet")
+        else:
+            data_files = self.dataset_path
+
         # Load dataset
         try:
-            # Try loading as HuggingFace dataset
-            if "/" in self.dataset_path or not Path(self.dataset_path).exists():
-                # HuggingFace dataset name
-                dataset = load_dataset(
-                    self.dataset_path,
-                    split="train",
-                    streaming=True  # Use streaming for large datasets
-                )
-            else:
-                # Local parquet file(s)
+            if is_local:
                 dataset = load_dataset(
                     "parquet",
-                    data_files=self.dataset_path,
+                    data_files=data_files,
+                    split="train",
+                    streaming=True
+                )
+            else:
+                # Assume HuggingFace dataset name
+                dataset = load_dataset(
+                    self.dataset_path,
                     split="train",
                     streaming=True
                 )
@@ -520,6 +534,16 @@ class ParquetPickaPicDataset(IterableDataset):
             logger.error(f"Failed to load dataset from {self.dataset_path}: {e}")
             raise
         
+        # Sharding for multi-GPU and multi-worker
+        if torch.distributed.is_initialized():
+            world_size = torch.distributed.get_world_size()
+            rank = torch.distributed.get_rank()
+            dataset = dataset.shard(num_shards=world_size, index=rank)
+            
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is not None:
+            dataset = dataset.shard(num_shards=worker_info.num_workers, index=worker_info.id)
+
         # Shuffle if training
         if self.is_train:
             dataset = dataset.shuffle(seed=42, buffer_size=10000)
@@ -626,6 +650,7 @@ def dpo_collate_fn(examples: list[dict]) -> DpoBatch:
 
 
 def build_spright_dataset(dataset_root: Path, split: str, is_train: bool):
+    import webdataset as wds
     import glob
     # Look for tars directly in root or in data/ subdirectory
     patterns = [str(dataset_root / "*.tar"), str(dataset_root / "data" / "*.tar")]

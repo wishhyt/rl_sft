@@ -1116,8 +1116,8 @@ def train_dpo(config) -> None:
     # Save resolved config
     _save_config(config, config.run.output_dir)
 
-    logger.info("Building accelerator...", main_process_only=True)
     accelerator = _build_accelerator(config, 1)
+    logger.info("Building accelerator...", main_process_only=True)
 
     if config.precision.allow_tf32:
         torch.backends.cuda.matmul.allow_tf32 = True

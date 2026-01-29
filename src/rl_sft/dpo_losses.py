@@ -102,7 +102,7 @@ def loss_kto(model_losses, ref_losses, kto_labels, config):
     # val = r_model - r_ref
     # We define success r = -MSE
     # so r_model - r_ref = -(model_MSE - ref_MSE) = ref_MSE - model_MSE
-    val = (ref_losses - model_losses).mean(dim=[1,2,3])
+    val = ref_losses - model_losses
     v = config.dpo.beta_dpo * val
     
     weights = torch.where(kto_labels == 1, config.dpo.kto_lambda_d, config.dpo.kto_lambda_u)

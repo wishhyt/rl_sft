@@ -1,5 +1,5 @@
 {
-  "base_config": "configs/dpo_pickapic.json",
+  "base_config": "configs/dpo_pickapic_local_parquet.json",
   "experiments": [
     {
       "name": "diffusion_dpo",
