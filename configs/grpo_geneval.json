@@ -1,0 +1,52 @@
+﻿{
+  "model": {
+    "name_or_path": "/home/stang/storage/temp_code/pretrained_weights/stable-diffusion-v1-4",
+    "use_lora": true,
+    "lora_rank": 16,
+    "lora_alpha": 32
+  },
+  "training": {
+    "mode": "grpo",
+    "learning_rate": 1e-5,
+    "batch_size": 16,
+    "gradient_accumulation_steps": 4,
+    "num_inner_epochs": 1,
+    "clip_range": 0.0001,
+    "cfg": true,
+    "adv_clip_max": 5.0
+  },
+  "sampling": {
+    "num_image_per_prompt": 16,
+    "train_batch_size": 1,
+    "num_steps": 50,
+    "guidance_scale": 5.0,
+    "resolution": 512,
+    "num_batches_per_epoch": 1
+  },
+  "dataset": {
+    "name": "geneval2",
+    "root": "/home/stang/storage/temp_code/GenEval2/data/processed",
+    "train_split": "train_high_score",
+    "test_split": "test_high_score"
+  },
+  "reward": {
+    "weights": {
+      "geneval2": 1.0
+    }
+  },
+  "run": {
+    "output_dir": "/home/stang/storage/temp_code/training_results/grpo_n_1",
+    "eval_output_dir": "/home/stang/storage/temp_code/training_results/grpo_n_1/eval_results",
+    "save_freq": 5,
+    "eval_freq": 5,
+    "checkpoint_limit": 5
+  },
+  "precision": {
+    "mixed_precision": "bf16"
+  },
+  "logging": {
+    "use_wandb": true,
+    "wandb_project": "sd14-grpo-n-1"
+  }
+}
+

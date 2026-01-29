@@ -1,0 +1,37 @@
+{
+  "model": {
+    "name_or_path": "/home/stang/storage/temp_code/pretrained_weights/stable-diffusion-v1-4"
+  },
+  "training": {
+    "mode": "sft",
+    "learning_rate": 5e-5
+  },
+  "sampling": {
+    "train_batch_size": 16,
+    "resolution": 512
+  },
+  "dataset": {
+    "name": "geneval2",
+    "root": "/home/stang/storage/temp_code/GenEval2/data/processed",
+    "train_split": "train_high_score",
+    "test_split": "test_high_score"
+  },
+  "reward": {
+    "weights": {
+      "geneval2": 1.0
+    }
+  },
+  "precision": {
+    "mixed_precision": "bf16",
+    "allow_tf32": true
+  },
+  "run": {
+    "output_dir": "/home/stang/storage/temp_code/training_results/sft_with_images_n_1",
+    "save_freq": 50,
+    "eval_freq": 50
+  },
+  "logging": {
+    "use_wandb": true,
+    "wandb_project": "sd14-sft-n-1"
+  }
+}

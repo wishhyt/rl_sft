@@ -1,0 +1,38 @@
+{
+  "model": {
+    "name_or_path": "/home/stang/storage/temp_code/pretrained_weights/stable-diffusion-v1-4",
+    "use_lora": true,
+    "lora_rank": 16,
+    "lora_alpha": 32
+  },
+  "training": {
+    "mode": "dpo",
+    "learning_rate": 1e-4,
+    "num_inner_epochs": 1,
+    "gradient_accumulation_steps": 4
+  },
+  "dataset": {
+    "name": "pickapic",
+    "dpo_dataset_path": "/home/stang/storage/temp_code/pretrained_weights/pickapic_v2_webdataset"
+  },
+  "dpo": {
+    "beta_dpo": 2500.0,
+    "train_method": "diffusion-dpo"
+  },
+  "sampling": {
+    "train_batch_size": 2,
+    "resolution": 512
+  },
+  "run": {
+    "output_dir": "logs/dpo_pickapic",
+    "num_epochs": 10000,
+    "save_freq": 100
+  },
+  "logging": {
+    "use_wandb": true,
+    "wandb_project": "sd14-dpo"
+  },
+  "precision": {
+    "mixed_precision": "bf16"
+  }
+}
