@@ -1,0 +1,22 @@
+{
+  "base_config": "configs/dpo_pickapic.json",
+  "experiments": [
+    {
+      "name": "standard_dpo",
+      "gpus": "0",
+      "dpo_method": "diffusion-dpo",
+      "beta_dpo": 5000.0,
+      "output_dir": "logs/dpo_comparison/standard",
+      "eval_output_dir": "logs/dpo_comparison/standard/eval"
+    },
+    {
+      "name": "sdpo_wp",
+      "gpus": "1",
+      "dpo_method": "sdpo",
+      "beta_dpo": 5000.0,
+      "sdpo_mu": 0.1,
+      "output_dir": "logs/dpo_comparison/sdpo",
+      "eval_output_dir": "logs/dpo_comparison/sdpo/eval"
+    }
+  ]
+}

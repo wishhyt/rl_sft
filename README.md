@@ -56,6 +56,63 @@ python run.py --config configs/grpo_geneval.json --dry-run
 |------|--------|------|
 | `dpo.curriculum_groups` | 0 | 课程分组数 (0禁用)。若 >0，需在 `data.py` 配置分数逻辑。 |
 
+#### Multi-Method DPO Comparison
+
+支持同时对比多个 DPO 方法（如 diffusion-dpo, sdpo, kto 等），每个方法使用独立的 GPU 和输出目录。
+
+**配置文件格式** (`configs/multi_dpo_config.json`):
+```json
+{
+  "base_config": "configs/dpo_pickapic.json",
+  "experiments": [
+    {
+      "name": "diffusion_dpo",
+      "gpus": "0",
+      "dpo_method": "diffusion-dpo",
+      "beta_dpo": 5000.0,
+      "output_dir": "logs/multi_dpo/diffusion_dpo",
+      "eval_output_dir": "logs/multi_dpo/diffusion_dpo/eval"
+    },
+    {
+      "name": "sdpo",
+      "gpus": "1",
+      "dpo_method": "sdpo",
+      "beta_dpo": 5000.0,
+      "sdpo_mu": 0.1,
+      "output_dir": "logs/multi_dpo/sdpo",
+      "eval_output_dir": "logs/multi_dpo/sdpo/eval"
+    }
+  ]
+}
+```
+
+**运行多方法对比**:
+```bash
+# 并行运行所有方法
+python run_multi_dpo.py --config configs/multi_dpo_config.json
+
+# 只运行指定方法
+python run_multi_dpo.py --config configs/multi_dpo_config.json --methods diffusion_dpo sdpo
+
+# 顺序运行（适合 GPU 资源有限的情况）
+python run_multi_dpo.py --config configs/multi_dpo_config.json --sequential
+
+# 预览配置
+python run_multi_dpo.py --config configs/multi_dpo_config.json --dry-run
+
+# 全局参数覆盖
+python run_multi_dpo.py --config configs/multi_dpo_config.json --set run.num_epochs=100
+```
+
+**对比结果**:
+```bash
+# 生成对比报告
+python compare_dpo_results.py --experiments logs/multi_dpo/diffusion_dpo logs/multi_dpo/sdpo logs/multi_dpo/kto
+
+# 保存为文件
+python compare_dpo_results.py --experiments logs/multi_dpo/* --output comparison_report.md --show-plots
+```
+
 
 ### GRPO
 
@@ -76,6 +133,17 @@ python run.py --config configs/grpo_geneval.json --dry-run
 ## 数据集准备
 
 ### PickaPic (DPO)
+
+支持两种格式：
+
+1. **WebDataset (.tar)**
+   - 目录结构：包含 `.tar` 文件的文件夹
+   - Config: `dataset.dpo_format = "webdataset"` (默认)
+
+2. **Parquet (HuggingFace/Local)**
+   - HuggingFace 数据集: `yuvalkirstain/pickapic_v2`
+   - 本地 Parquet 文件: `/path/to/data.parquet`
+   - Config: `dataset.dpo_format = "parquet"`
 
 WebDataset tar 结构：
 ```

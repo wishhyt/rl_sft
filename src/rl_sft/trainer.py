@@ -1238,19 +1238,30 @@ def train_dpo(config) -> None:
             
             bsz = latents_w.shape[0]
 
-            for inner_epoch in range(config.training.num_inner_epochs):
-                # Sample noise and timesteps (inside inner_epoch like train_sft)
-                noise = torch.randn_like(latents_w)
-                noise = torch.cat([noise, noise], dim=0)  # Same noise for winner and loser
-                
-                timesteps = torch.randint(
-                    0, scheduler_timesteps,
-                    (bsz,), device=latents.device, dtype=torch.long
-                )
-                timesteps = torch.cat([timesteps, timesteps])  # Same timesteps for pairs
+            # CRITICAL: Sample noise and timesteps ONCE per batch (outside inner_epoch loop)
+            # This matches ALL reference DPO implementations:
+            # - DiffusionDPO: samples noise outside training loop
+            # - Curriculum-DPO: samples noise outside training loop  
+            # - DSPO: samples noise outside training loop
+            # - Diffusion-SDPO: samples noise outside training loop
+            # - diffusion-kto: samples noise outside training loop
+            # Unlike SFT which resamples noise in each inner_epoch for data augmentation,
+            # DPO requires the SAME noise across inner epochs to properly compute
+            # the preference-based loss with consistent comparisons.
+            noise = torch.randn_like(latents_w)
+            noise = torch.cat([noise, noise], dim=0)  # Same noise for winner and loser
+            
+            timesteps = torch.randint(
+                0, scheduler_timesteps,
+                (bsz,), device=latents.device, dtype=torch.long
+            )
+            timesteps = torch.cat([timesteps, timesteps])  # Same timesteps for pairs
 
-                # Add noise to latents
+            for inner_epoch in range(config.training.num_inner_epochs):
+                # Use the SAME noise and timesteps for all inner epochs
+                # Add noise to latents (using shared noise and timesteps)
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
+
                 
                 target = noise  # epsilon prediction
                 with accelerator.accumulate(unet):

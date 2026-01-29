@@ -13,7 +13,8 @@
   },
   "dataset": {
     "name": "pickapic",
-    "dpo_dataset_path": "/home/stang/storage/temp_code/pretrained_weights/pickapic_v2_webdataset"
+    "dpo_format": "parquet",
+    "dpo_dataset_path": "/path/to/local/pickapic.parquet"
   },
   "dpo": {
     "beta_dpo": 5000.0,
@@ -24,7 +25,7 @@
     "resolution": 512
   },
   "run": {
-    "output_dir": "logs/dpo_pickapic",
+    "output_dir": "logs/dpo_pickapic_local",
     "num_epochs": 10000,
     "save_freq": 100
   },

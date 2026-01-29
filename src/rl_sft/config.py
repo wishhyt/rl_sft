@@ -49,6 +49,8 @@ class DatasetConfig:
     dpo_dataset_path: str = ""
     dpo_dataset_name: str = "pickapic_v2_webdataset"  # or "fifa_pickapic_v2"
     dpo_score_dir: str = ""  # Path to pre-computed scores for curriculum learning
+    dpo_format: str = "webdataset"  # "webdataset" or "parquet"
+
 
 
 @dataclass

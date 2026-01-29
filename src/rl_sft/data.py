@@ -461,8 +461,146 @@ class CurriculumPickaPicDataset(IterableDataset):
             yield sample
 
 
-def build_pickapic_dataset(dataset_path: str, is_train: bool, curriculum_groups: int = 0):
-    return CurriculumPickaPicDataset(dataset_path, is_train, curriculum_groups)
+class ParquetPickaPicDataset(IterableDataset):
+    """HuggingFace Datasets wrapper for PickaPic-v2 Parquet format."""
+    
+    def __init__(self, dataset_path: str, is_train: bool, curriculum_groups: int = 0):
+        """Initialize Parquet PickaPic dataset.
+        
+        Args:
+            dataset_path: HuggingFace dataset name (e.g., "yuvalkirstain/pickapic_v2") 
+                         or local parquet file path
+            is_train: Whether this is training data (enables shuffling)
+            curriculum_groups: Number of curriculum groups (0 disables curriculum)
+        """
+        self.dataset_path = dataset_path
+        self.is_train = is_train
+        self.curriculum_groups = curriculum_groups
+        self.current_group_idx = 0
+        
+        # Curriculum thresholds (same as WebDataset version)
+        if curriculum_groups > 0:
+            self.thresholds = [1.0 - (i + 1) / curriculum_groups for i in range(curriculum_groups)]
+        else:
+            self.thresholds = [0.0]
+    
+    def update_cl(self):
+        """Update curriculum level."""
+        if self.current_group_idx < self.curriculum_groups - 1:
+            self.current_group_idx += 1
+            logger.info(
+                f"Curriculum updated: Level {self.current_group_idx}, "
+                f"Min Margin {self.thresholds[self.current_group_idx]:.4f}",
+                main_process_only=True
+            )
+    
+    def __iter__(self):
+        import io
+        from datasets import load_dataset
+        
+        # Load dataset
+        try:
+            # Try loading as HuggingFace dataset
+            if "/" in self.dataset_path or not Path(self.dataset_path).exists():
+                # HuggingFace dataset name
+                dataset = load_dataset(
+                    self.dataset_path,
+                    split="train",
+                    streaming=True  # Use streaming for large datasets
+                )
+            else:
+                # Local parquet file(s)
+                dataset = load_dataset(
+                    "parquet",
+                    data_files=self.dataset_path,
+                    split="train",
+                    streaming=True
+                )
+        except Exception as e:
+            logger.error(f"Failed to load dataset from {self.dataset_path}: {e}")
+            raise
+        
+        # Shuffle if training
+        if self.is_train:
+            dataset = dataset.shuffle(seed=42, buffer_size=10000)
+        
+        current_threshold = self.thresholds[self.current_group_idx] if self.curriculum_groups > 0 else 0.0
+        
+        for sample in dataset:
+            try:
+                # Extract fields
+                caption = sample.get("caption", "")
+                if not caption:
+                    continue
+                
+                # Get label (preference score for image_0)
+                label_0 = float(sample.get("label_0", 0.5))
+                
+                # Calculate margin for curriculum learning
+                margin = abs(2 * label_0 - 1.0)
+                
+                # Curriculum filter
+                if margin < current_threshold:
+                    continue
+                
+                # Skip neutral samples
+                if abs(label_0 - 0.5) < 1e-3:
+                    continue
+                
+                # Decode images from bytes
+                jpg_0 = sample.get("jpg_0")
+                jpg_1 = sample.get("jpg_1")
+                
+                if jpg_0 is None or jpg_1 is None:
+                    continue
+                
+                # Convert bytes to PIL Images
+                if isinstance(jpg_0, bytes):
+                    img_0 = Image.open(io.BytesIO(jpg_0)).convert("RGB")
+                else:
+                    img_0 = jpg_0.convert("RGB")
+                
+                if isinstance(jpg_1, bytes):
+                    img_1 = Image.open(io.BytesIO(jpg_1)).convert("RGB")
+                else:
+                    img_1 = jpg_1.convert("RGB")
+                
+                # Assign winner/loser based on label_0
+                if label_0 > 0.5:
+                    img_w, img_l = img_0, img_1
+                else:
+                    img_w, img_l = img_1, img_0
+                
+                yield {
+                    "image_w": img_w,
+                    "image_l": img_l,
+                    "prompt": caption,
+                    "margin": margin,
+                }
+                
+            except Exception as e:
+                # Skip corrupted samples
+                logger.warning(f"Error processing sample: {e}")
+                continue
+
+
+def build_pickapic_dataset(dataset_path: str, is_train: bool, curriculum_groups: int = 0, format_type: str = "webdataset"):
+    """Build PickaPic dataset with specified format.
+    
+    Args:
+        dataset_path: Path to dataset (directory for webdataset, HF name or file for parquet)
+        is_train: Whether this is training data
+        curriculum_groups: Number of curriculum groups
+        format_type: "webdataset" or "parquet"
+    
+    Returns:
+        Dataset instance
+    """
+    if format_type == "parquet":
+        return ParquetPickaPicDataset(dataset_path, is_train, curriculum_groups)
+    else:
+        return CurriculumPickaPicDataset(dataset_path, is_train, curriculum_groups)
+
 
 
 def dpo_collate_fn(examples: list[dict]) -> DpoBatch:
@@ -612,10 +750,12 @@ def build_dataloaders(config, accelerator):
         if not dataset_path:
             raise ValueError("DPO mode requires dataset.dpo_dataset_path or dataset.root to be set")
         
+        format_type = config.dataset.dpo_format
         train_dataset = build_pickapic_dataset(
             dataset_path, 
             is_train=True, 
-            curriculum_groups=config.dpo.curriculum_groups
+            curriculum_groups=config.dpo.curriculum_groups,
+            format_type=format_type
         )
         train_sampler = DummySampler()
         
@@ -632,6 +772,7 @@ def build_dataloaders(config, accelerator):
         test_dataloader = None
         
         return train_dataloader, test_dataloader, train_sampler
+
 
     if config.training.mode == "sft":
         if config.dataset.name == "spright":

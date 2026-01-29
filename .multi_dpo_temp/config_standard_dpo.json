@@ -7,7 +7,7 @@
   },
   "training": {
     "mode": "dpo",
-    "learning_rate": 1e-4,
+    "learning_rate": 0.0001,
     "num_inner_epochs": 1,
     "gradient_accumulation_steps": 4
   },
@@ -24,13 +24,15 @@
     "resolution": 512
   },
   "run": {
-    "output_dir": "logs/dpo_pickapic",
+    "output_dir": "logs/dpo_comparison/standard",
     "num_epochs": 10000,
-    "save_freq": 100
+    "save_freq": 100,
+    "eval_output_dir": "logs/dpo_comparison/standard/eval"
   },
   "logging": {
     "use_wandb": true,
-    "wandb_project": "sd14-dpo"
+    "wandb_project": "sd14-dpo",
+    "wandb_run_name": "standard_dpo"
   },
   "precision": {
     "mixed_precision": "bf16"

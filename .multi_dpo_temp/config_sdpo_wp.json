@@ -7,7 +7,7 @@
   },
   "training": {
     "mode": "dpo",
-    "learning_rate": 1e-4,
+    "learning_rate": 0.0001,
     "num_inner_epochs": 1,
     "gradient_accumulation_steps": 4
   },
@@ -17,20 +17,23 @@
   },
   "dpo": {
     "beta_dpo": 5000.0,
-    "train_method": "diffusion-dpo"
+    "train_method": "sdpo",
+    "sdpo_mu": 0.1
   },
   "sampling": {
     "train_batch_size": 2,
     "resolution": 512
   },
   "run": {
-    "output_dir": "logs/dpo_pickapic",
+    "output_dir": "logs/dpo_comparison/sdpo",
     "num_epochs": 10000,
-    "save_freq": 100
+    "save_freq": 100,
+    "eval_output_dir": "logs/dpo_comparison/sdpo/eval"
   },
   "logging": {
     "use_wandb": true,
-    "wandb_project": "sd14-dpo"
+    "wandb_project": "sd14-dpo",
+    "wandb_run_name": "sdpo_wp"
   },
   "precision": {
     "mixed_precision": "bf16"
