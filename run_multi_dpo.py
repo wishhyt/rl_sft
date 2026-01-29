@@ -45,6 +45,9 @@ def merge_experiment_config(base_config: dict[str, Any], experiment: dict[str, A
     if 'output_dir' in experiment:
         merged.setdefault('run', {})['output_dir'] = experiment['output_dir']
     
+    if 'resume_from' in experiment:
+        merged.setdefault('run', {})['resume_from'] = experiment['resume_from']
+    
     if 'eval_output_dir' in experiment:
         merged.setdefault('run', {})['eval_output_dir'] = experiment['eval_output_dir']
     
