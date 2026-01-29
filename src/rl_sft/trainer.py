@@ -411,16 +411,23 @@ def _evaluate(
                 "metadata": batch.metadata[i],
             }
             for key, value in scores.items():
-                res[key] = value[i]
+                # Convert to python scalar if tensor
+                v = value[i]
+                if hasattr(v, "item"):
+                    v = v.item()
+                res[key] = v
             eval_results.append(res)
 
             # Save generated image - include rank to avoid collisions
-            prompt_snippet = batch.prompts[i][:30].replace(" ", "_").replace("/", "_")
-            img_path = eval_img_dir / f"rank{accelerator.process_index}_b{batch_idx}_i{i}_{prompt_snippet}.png"
+            # Sanitize prompt for filename
+            safe_prompt = "".join([c if c.isalnum() else "_" for c in batch.prompts[i]])[:64]
+            img_path = eval_img_dir / f"r{accelerator.process_index}_b{batch_idx:04d}_i{i:02d}_{safe_prompt}.png"
             pil_images[i].save(img_path)
 
     metrics = {}
     for key, value in all_rewards.items():
+        if not value: # Handle empty list
+            continue
         local_tensor = torch.cat(value).float()
         # gather_for_metrics handles potential padding and varied sizes
         all_results = accelerator.gather_for_metrics(local_tensor)
@@ -429,13 +436,39 @@ def _evaluate(
             
     # Gather all individual evaluation results from all processes
     from accelerate.utils import gather_object
-    gathered_results = gather_object(eval_results)
+    try:
+        gathered_results = gather_object(eval_results)
+    except Exception as e:
+        logger.error(f"Failed to gather evaluation results: {e}")
+        gathered_results = []
 
     if accelerator.is_main_process:
         # Flatten the list of lists from gather_object
         all_eval_results = []
-        for partial_list in gathered_results:
-            all_eval_results.extend(partial_list)
+        if isinstance(gathered_results, list) and len(gathered_results) > 0:
+            if isinstance(gathered_results[0], list):
+                 # It's a list of lists
+                for partial_list in gathered_results:
+                    all_eval_results.extend(partial_list)
+            else:
+                 # It's already flattened (unexpected for gather_object but possible if single process?)
+                 # gather_object usually returns list of objects.
+                 # If eval_results is a list, gather_object returns [list, list...]
+                 all_eval_results.extend(gathered_results)
+        
+        # Flatten again just in case? No, the loop above handles [list, list]
+        # Actually gather_object returns [obj1, obj2...] if input was obj.
+        # But we passed `eval_results` (a list). So it returns [list_from_p0, list_from_p1...]
+        
+        # If gathered_results was flat (e.g. single process?), it might be [dict, dict]?
+        # No, gather_object docs: "concatenates the results... into a single list" ? 
+        # Wait, gather_object: "Gather picklable objects... If the object is a list... it is NOT implicitly flattened"
+        # It returns a list of size (num_processes * 1). 
+        # So we have [ [res1, res2], [res3, res4] ... ]
+        
+        # Correction: gather_object collects the objects passed.
+        # So if we pass a list, we get a list of lists.
+        # My logic `for partial_list in gathered_results` is correct.
 
         logger.info(f"Eval metrics: {metrics}", main_process_only=True)
         # Save evaluation table

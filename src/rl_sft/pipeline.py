@@ -57,12 +57,14 @@ def build_pipeline(config, device: torch.device, inference_dtype: torch.dtype) -
             target_modules=config.model.lora_target_modules or ["to_k", "to_q", "to_v", "to_out.0"],
         )
         pipeline.unet.add_adapter(lora_config)
-        # pipeline.unet.enable_gradient_checkpointing()
         
         unet = pipeline.unet
     else:
         pipeline.unet.to(device, dtype=inference_dtype)
         unet = pipeline.unet
+
+    if config.training.gradient_checkpointing:
+        unet.enable_gradient_checkpointing()
 
     return pipeline, unet
 

@@ -741,7 +741,32 @@ def build_dataloaders(config, accelerator):
         else:
             train_collate_fn = PairedPromptImageDataset.collate_fn
             
-        test_dataset = build_spright_dataset(dataset_root, config.dataset.test_split, False)
+        # Validation on fixed subset of training data (first 50)
+        # We reuse build_spright_dataset but with is_train=False to get a SimpleShardList (sequential)
+        # Then we take the first 50 items.
+        
+        # Note: We want the EXACT same data as training but deterministic subset.
+        # build_spright_dataset(..., is_train=False) does SimpleShardList.
+        val_dataset_full = build_spright_dataset(dataset_root, config.dataset.train_split, is_train=False)
+        
+        # Create a finite dataset from the WebDataset pipeline for validation
+        # We need to manually slice it. Since wds.DataPipeline is an iterable, we can't just slice.
+        # We will wrap it in an IterableDataset that stops after 50.
+        
+        class LimitedIterableDataset(IterableDataset):
+            def __init__(self, dataset, limit):
+                self.dataset = dataset
+                self.limit = limit
+                
+            def __iter__(self):
+                count = 0
+                for item in self.dataset:
+                    if count >= self.limit:
+                        break
+                    yield item
+                    count += 1
+                    
+        test_dataset = LimitedIterableDataset(val_dataset_full, limit=50)
         test_collate_fn = PairedPromptImageDataset.collate_fn
         
         train_sampler = DummySampler()
@@ -761,7 +786,7 @@ def build_dataloaders(config, accelerator):
         test_dataloader = DataLoader(
             test_dataset,
             batch_size=config.sampling.test_batch_size,
-            num_workers=2,
+            num_workers=0, # Avoid multi-processing issues for small finite iterables if possible, or keep small
             collate_fn=test_collate_fn,
             pin_memory=True
         )

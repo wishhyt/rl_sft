@@ -4,7 +4,8 @@
   },
   "training": {
     "mode": "sft",
-    "learning_rate": 5e-5
+    "learning_rate": 5e-5,
+    "gradient_checkpointing": false
   },
   "sampling": {
     "train_batch_size": 16,

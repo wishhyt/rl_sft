@@ -96,6 +96,7 @@ class TrainingConfig:
     adam_beta2: float = 0.999
     adam_weight_decay: float = 1e-4
     adam_epsilon: float = 1e-8
+    gradient_checkpointing: bool = False
 
 
 @dataclass
