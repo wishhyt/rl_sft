@@ -1,197 +1,170 @@
-﻿# rl_sft
+﻿# rl_sft: Advanced Stable Diffusion Training Framework
 
-SD1.4/SD1.5 训练框架，支持 **GRPO**、**DPO** 和 **SFT** 三种训练模式。
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
 
-## 训练模式
+**rl_sft** is a high-performance, modular training framework for **Stable Diffusion (SD1.4/1.5)**. It unifies state-of-the-art alignment techniques, allowing researchers and developers to fine-tune generative models using:
 
-| 模式 | 配置文件 | 数据集 | 说明 |
-|------|---------|--------|------|
-| **GRPO** | `grpo_geneval.json` | geneval | 在线采样 + geneval2 reward |
-| **DPO** | `dpo_pickapic.json` | pickapic | 离线偏好对数据 |
-| **SFT** | `sft_spright.json` | spright | GT 图像监督学习 |
+-   🎯 **Supervised Fine-Tuning (SFT)**: High-fidelity training with ground-truth data.
+-   ⚖️ **Group Relative Policy Optimization (GRPO)**: Online reinforcement learning with group-based advantage normalization.
+-   👍 **Direct Preference Optimization (DPO)**: Offline alignment using preference data (supports `diffusion-dpo`, `sdpo`, `kto`).
 
-## 快速开始
+---
+
+## 🌟 Key Highlights
+
+| Core Capability | Description |
+| :--- | :--- |
+| **Unified Codebase** | Seamlessly switch between SFT, GRPO, and DPO modes via config. |
+| **optimized Scale** | Built on `accelerate` with **bf16** mixed precision, **8-bit Adam**, and **Gradient Checkpointing**. |
+| **Flexible Rewards** | Plug-and-play reward system (Geneval, PickaPic) for diverse RL objectives. |
+| **Advanced DPO** | Includes **Curriculum Learning** and **Multi-Method Comparison** for robust alignment research. |
+
+---
+
+## 🏗️ System Architecture
+
+The framework is built around a centralized `Config` system that drives a modular `Trainer`. This ensures consistency across different training modes while allowing for granular customization.
+
+![Architecture Overview](docs/assets/architecture_overview.png)
+
+### Key Components
+-   **Trainer**: The core orchestration engine handling the training loop, gradient accumulation, and model updates.
+-   **Reward System**: Plug-and-play reward evaluation (e.g., Geneval, PickaPic scoring).
+-   **Data Engine**: specialized DataLoaders for diverse formats (WebDataset, Parquet) with automatic aspect ratio bucketing for SFT.
+
+---
+
+## 🚀 Features
+
+-   **Multi-Mode Training**:
+    -   **SFT**: Standard fine-tuning with Ground Truth images.
+    -   **GRPO**: Online RL with group-based normalization and advantage computation.
+    -   **DPO**: Offline preference optimization supporting multiple variants (`diffusion-dpo`, `sdpo`, `kto`).
+-   **Performance Optimization**:
+    -   Mixed Precision (`bf16`/`fp16`)
+    -   8-bit Adam optimizer support
+    -   Gradient Checkpointing
+    -   LoRA (Low-Rank Adaptation) integration
+-   **Advanced DPO Capabilities**:
+    -   **Multi-Method Comparison**: Train multiple DPO variants simultaneously on different GPUs.
+    -   **Curriculum Learning**: Progressively increase difficulty based on sample scores.
+-   **Logging & Tracking**:
+    -   Native **WandB** integration.
+    -   Local JSONL metrics logging.
+    -   Automatic checkpointing with best-model retention.
+
+---
+
+## 🛠️ Installation
+
+Ensure you have **Python 3.10+** and a CUDA-capable GPU.
 
 ```bash
-# GRPO + Geneval2 reward
-python run.py --config configs/grpo_geneval.json --gpus 2,3
+# Clone the repository
+git clone https://github.com/your-username/rl_sft.git
+cd rl_sft
 
-# DPO + PickaPic 偏好数据
+# Install dependencies
+pip install torch diffusers accelerate transformers webdataset bitsandbytes wandb
+```
+
+---
+
+## ⚡ Quick Start
+
+The entry point for all training tasks is `run.py`. Configuration is handled via JSON files in `configs/`.
+
+### 1. Group Relative Policy Optimization (GRPO)
+GRPO uses online sampling and computes advantages relative to a group of generations for the same prompt.
+
+```bash
+# Run GRPO with Geneval2 reward on 2 GPUs
+python run.py --config configs/grpo_geneval.json --gpus 0,1
+```
+
+![Training Pipeline](docs/assets/training_flow.png)
+
+### 2. Direct Preference Optimization (DPO)
+DPO aligns the model using offline preference pairs (Winner vs. Loser). Supported methods include `diffusion-dpo`, `sdpo`, and `kto`.
+
+```bash
+# Run DPO using PickaPic dataset
 python run.py --config configs/dpo_pickapic.json
+```
 
-# SFT + Spright GT 图像
+![RL Mechanism](docs/assets/dpo_rl_mechanism.png)
+
+### 3. Supervised Fine-Tuning (SFT)
+Standard training using image-caption pairs with Aspect Ratio Bucketing to preserve image details.
+
+```bash
+# Run SFT on Spright dataset
 python run.py --config configs/sft_spright.json
-
-# 预览配置（不训练）
-python run.py --config configs/grpo_geneval.json --dry-run
 ```
 
-## 必须配置的路径
+---
 
-| 参数 | 说明 |
-|------|------|
-| `model.name_or_path` | SD1.4/SD1.5 预训练模型路径 |
-| `dataset.root` | 数据集目录（geneval/spright） |
-| `dataset.dpo_dataset_path` | pickapic WebDataset tar 文件目录（DPO 模式） |
+## ⚙️ Configuration & Usage
 
-## 模式参数
-
-### DPO
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `dpo.beta_dpo` | 5000.0 | KL 惩罚强度 |
-| `dpo.train_method` | `diffusion-dpo` | 损失类型：`diffusion-dpo`/`dspo`/`dmpo`/`sdpo`/`kto` |
-
-#### KTO/SDPO Specifics
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `dpo.kto_lambda_d` | 1.0 | KTO desirable weight |
-| `dpo.kto_lambda_u` | 1.0 | KTO undesirable weight |
-| `dpo.sdpo_mu` | 0.1 | SDPO mu |
-| `dpo.sdpo_alpha` | 1.0 | SDPO alpha (strength) |
-
-#### Curriculum Learning
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `dpo.curriculum_groups` | 0 | 课程分组数 (0禁用)。若 >0，需在 `data.py` 配置分数逻辑。 |
-
-#### Multi-Method DPO Comparison
-
-支持同时对比多个 DPO 方法（如 diffusion-dpo, sdpo, kto 等），每个方法使用独立的 GPU 和输出目录。
-
-**配置文件格式** (`configs/multi_dpo_config.json`):
-```json
-{
-  "base_config": "configs/dpo_pickapic.json",
-  "experiments": [
-    {
-      "name": "diffusion_dpo",
-      "gpus": "0",
-      "dpo_method": "diffusion-dpo",
-      "beta_dpo": 5000.0,
-      "output_dir": "logs/multi_dpo/diffusion_dpo",
-      "eval_output_dir": "logs/multi_dpo/diffusion_dpo/eval"
-    },
-    {
-      "name": "sdpo",
-      "gpus": "1",
-      "dpo_method": "sdpo",
-      "beta_dpo": 5000.0,
-      "sdpo_mu": 0.1,
-      "output_dir": "logs/multi_dpo/sdpo",
-      "eval_output_dir": "logs/multi_dpo/sdpo/eval"
-    }
-  ]
-}
-```
-
-**运行多方法对比**:
-```bash
-# 并行运行所有方法
-python run_multi_dpo.py --config configs/multi_dpo_config.json
-
-# 只运行指定方法
-python run_multi_dpo.py --config configs/multi_dpo_config.json --methods diffusion_dpo sdpo
-
-# 顺序运行（适合 GPU 资源有限的情况）
-python run_multi_dpo.py --config configs/multi_dpo_config.json --sequential
-
-# 预览配置
-python run_multi_dpo.py --config configs/multi_dpo_config.json --dry-run
-
-# 全局参数覆盖
-python run_multi_dpo.py --config configs/multi_dpo_config.json --set run.num_epochs=100
-```
-
-**对比结果**:
-```bash
-# 生成对比报告
-python compare_dpo_results.py --experiments logs/multi_dpo/diffusion_dpo logs/multi_dpo/sdpo logs/multi_dpo/kto
-
-# 保存为文件
-python compare_dpo_results.py --experiments logs/multi_dpo/* --output comparison_report.md --show-plots
-```
-
-
-### GRPO
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `reward.weights.geneval` | 1.0 | geneval reward 权重 |
-| `sampling.num_image_per_prompt` | 4 | 每个 prompt 采样数量 |
-
-### SFT
-
-使用 GT 图像直接监督训练，MSE loss。
-
-**Aspect Ratio Bucketing**: SFT 模式自动使用长宽比分桶，保留原始图像比例：
-- 支持 13 种标准分辨率 (512x512, 576x448, 640x384, ...)
-- 每个 batch 内图像自动缩放到相同 bucket 尺寸
-- 最大化保留图像内容，减少裁剪损失
-
-## 数据集准备
-
-### PickaPic (DPO)
-
-支持两种格式：
-
-1. **WebDataset (.tar)**
-   - 目录结构：包含 `.tar` 文件的文件夹
-   - Config: `dataset.dpo_format = "webdataset"` (默认)
-
-2. **Parquet (HuggingFace/Local)**
-   - HuggingFace 数据集: `yuvalkirstain/pickapic_v2`
-   - 本地 Parquet 文件: `/path/to/data.parquet`
-   - Config: `dataset.dpo_format = "parquet"`
-
-WebDataset tar 结构：
-```
-├── 0.jpg / jpg_0.jpg    # 图像1
-├── 1.jpg / jpg_1.jpg    # 图像2
-└── sample.json          # {"caption": "...", "label_0": 0|1}
-```
-`label_0=1` 表示 jpg_0 获胜。
-
-### Geneval (GRPO)
-
-需要 geneval2 服务运行在 `http://127.0.0.1:18085`。
-
-### Spright (SFT)
-
-WebDataset tar，包含 `json`（含 `spatial_caption`）和 `jpg`。
-
-## CLI 覆盖
+### CLI Overrides
+You can override any configuration parameter from the command line using the `--set` argument or dedicated flags.
 
 ```bash
+# Example: Change learning rate and enable WandB
 python run.py --config configs/dpo_pickapic.json \
-  --set dpo.beta_dpo=2500 \
-  --set logging.use_wandb=true
+    --set training.learning_rate=1e-6 \
+    --set logging.use_wandb=true
 ```
 
-## 输出
+### Key Configuration Parameters (`config.py`)
 
-每个训练任务通过 `run.output_dir` 指定独立输出目录，避免权重混淆：
+| Section | Parameter | Description |
+| :--- | :--- | :--- |
+| **DPO** | `dpo.beta_dpo` | KL penalty strength (default: 5000.0) |
+| **DPO** | `dpo.train_method` | training loss: `diffusion-dpo`, `sdpo`, `kto`, etc. |
+| **GRPO** | `sampling.num_image_per_prompt` | Number of generations per prompt for group normalization (default: 4) |
+| **SFT** | `dataset.root` | Path to the dataset root directory |
+| **Run** | `logging.use_wandb` | Enable Weights & Biases logging (True/False) |
 
-```json
-{
-  "run": {
-    "output_dir": "logs/grpo_geneval_beta5000"
-  }
-}
+---
+
+## 📂 Project Structure
+
+```text
+rl_sft/
+├── configs/               # JSON Configuration files
+├── docs/
+│   └── assets/            # Project diagrams and assets
+├── src/
+│   └── rl_sft/
+│       ├── config.py      # Centralized configuration dataclasses
+│       ├── train.py       # Training entry point
+│       ├── trainer.py     # Main training loops (SFT, DPO, GRPO)
+│       ├── model.py       # Model definitions (UNet, VAE, LoRA)
+│       └── rewards/       # Reward models for RL
+├── run.py                 # Main launcher script
+└── requirements.txt       # Python dependencies
 ```
 
-输出结构：
-```
-logs/<output_dir>/
-├── config.json
-├── metrics.jsonl
-└── checkpoints/{epoch_N, best, final}/
-```
+---
 
-## 依赖
+## 📊 Outputs
 
-- `torch`, `diffusers`, `accelerate`, `transformers`, `webdataset`
-- Optional: `wandb`, `bitsandbytes`
+Training artifacts are saved to `logs/<run_name>/`:
+-   **`checkpoints/`**: Saved model weights (Best/Final/Epoch).
+-   **`metrics.jsonl`**: Detailed step-by-step metrics.
+-   **`config.json`**: Resolved configuration for reproducibility.
+-   **`eval_images/`**: (If enabled) Sample images generated during validation.
 
+---
 
+## 🤝 Contributing
+
+Contributions are welcome! Please ensure your code follows the project's style guidelines (Black) and includes appropriate tests.
+
+## 📄 License
+
+This project is licensed under the MIT License.
