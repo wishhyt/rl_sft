@@ -1,15 +1,15 @@
 {
   "model": {
     "name_or_path": "/home/volume_shared/share_datasets/data_nvme_3/pretrained_weights/stable-diffusion-v1-4",
-    "use_lora": true,
+    "use_lora": false,
     "lora_rank": 16,
     "lora_alpha": 32
   },
   "training": {
     "mode": "dpo",
-    "learning_rate": 1e-4,
+    "learning_rate": 1e-8,
     "num_inner_epochs": 1,
-    "gradient_accumulation_steps": 4
+    "gradient_accumulation_steps": 1
   },
   "dataset": {
     "name": "pickapic",
@@ -36,6 +36,10 @@
     "wandb_project": "sd14-dpo"
   },
   "precision": {
-    "mixed_precision": "bf16"
+    "mixed_precision": "fp16"
+  },
+  "scheduler": {
+    "name": "constant",
+    "warmup_steps": 500
   }
 }
