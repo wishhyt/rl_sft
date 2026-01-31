@@ -7,7 +7,8 @@
       "dpo_method": "diffusion-dpo",
       "beta_dpo": 5000.0,
       "output_dir": "logs/multi_dpo/diffusion_dpo",
-      "eval_output_dir": "logs/multi_dpo/diffusion_dpo/eval"
+      "eval_output_dir": "logs/multi_dpo/diffusion_dpo/eval",
+      "resume_from": "logs/multi_dpo/diffusion_dpo/checkpoints/epoch_500"
     },
     {
       "name": "sdpo",
@@ -17,7 +18,8 @@
       "sdpo_mu": 0.1,
       "sdpo_alpha": 1.0,
       "output_dir": "logs/multi_dpo/sdpo",
-      "eval_output_dir": "logs/multi_dpo/sdpo/eval"
+      "eval_output_dir": "logs/multi_dpo/sdpo/eval",
+      "resume_from": "logs/multi_dpo/sdpo/checkpoints/epoch_2580"
     },
     {
       "name": "kto",
@@ -27,7 +29,8 @@
       "kto_lambda_d": 1.0,
       "kto_lambda_u": 1.0,
       "output_dir": "logs/multi_dpo/kto",
-      "eval_output_dir": "logs/multi_dpo/kto/eval"
+      "eval_output_dir": "logs/multi_dpo/kto/eval",
+      "resume_from": "logs/multi_dpo/kto/checkpoints/epoch_2840"
     },
     {
       "name": "dspo",
@@ -35,7 +38,8 @@
       "dpo_method": "dspo",
       "beta_dpo": 5000.0,
       "output_dir": "logs/multi_dpo/dspo",
-      "eval_output_dir": "logs/multi_dpo/dspo/eval"
+      "eval_output_dir": "logs/multi_dpo/dspo/eval",
+      "resume_from": "logs/multi_dpo/dspo/checkpoints/epoch_2900"
     },
     {
       "name": "dmpo",
@@ -43,7 +47,8 @@
       "dpo_method": "dmpo",
       "beta_dpo": 5000.0,
       "output_dir": "logs/multi_dpo/dmpo",
-      "eval_output_dir": "logs/multi_dpo/dmpo/eval"
+      "eval_output_dir": "logs/multi_dpo/dmpo/eval",
+      "resume_from": "logs/multi_dpo/dmpo/checkpoints/epoch_2860"
     }
   ]
 }

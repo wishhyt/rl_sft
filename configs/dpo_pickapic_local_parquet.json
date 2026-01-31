@@ -28,7 +28,7 @@
   "run": {
     "output_dir": "logs/dpo_pickapic_local",
     "num_epochs": 10000,
-    "save_freq": 40,
+    "save_freq": 20,
     "eval_freq": 20
   },
   "logging": {

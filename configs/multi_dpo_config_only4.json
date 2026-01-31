@@ -1,0 +1,47 @@
+{
+  "base_config": "configs/dpo_pickapic_local_parquet_only4.json",
+  "experiments": [
+    {
+      "name": "diffusion_dpo",
+      "gpus": "5",
+      "dpo_method": "diffusion-dpo",
+      "beta_dpo": 5000.0,
+      "wandb_project": "dpo-benchmark",
+      "wandb_run_name": "diffusion-dpo-b5000",
+      "output_dir": "logs/benchmark_dpo/diffusion_dpo",
+      "eval_output_dir": "logs/benchmark_dpo/diffusion_dpo/eval"
+    },
+    {
+      "name": "sdpo",
+      "gpus": "6",
+      "dpo_method": "sdpo",
+      "beta_dpo": 5000.0,
+      "sdpo_mu": 0.1,
+      "sdpo_alpha": 1.0,
+      "wandb_project": "dpo-benchmark",
+      "wandb_run_name": "sdpo-b5000-mu0.1",
+      "output_dir": "logs/benchmark_dpo/sdpo",
+      "eval_output_dir": "logs/benchmark_dpo/sdpo/eval"
+    },
+    {
+      "name": "dspo",
+      "gpus": "5",
+      "dpo_method": "dspo",
+      "beta_dpo": 5000.0,
+      "wandb_project": "dpo-benchmark",
+      "wandb_run_name": "dspo-b5000",
+      "output_dir": "logs/benchmark_dpo/dspo",
+      "eval_output_dir": "logs/benchmark_dpo/dspo/eval"
+    },
+    {
+      "name": "dmpo",
+      "gpus": "6",
+      "dpo_method": "dmpo",
+      "beta_dpo": 5000.0,
+      "wandb_project": "dpo-benchmark",
+      "wandb_run_name": "dmpo-b5000",
+      "output_dir": "logs/benchmark_dpo/dmpo",
+      "eval_output_dir": "logs/benchmark_dpo/dmpo/eval"
+    }
+  ]
+}

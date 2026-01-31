@@ -72,7 +72,13 @@ def merge_experiment_config(base_config: dict[str, Any], experiment: dict[str, A
         merged.setdefault('dpo', {})['sdpo_alpha'] = experiment['sdpo_alpha']
     
     # Wandb naming
-    merged.setdefault('logging', {})['wandb_run_name'] = experiment.get('name', 'dpo_experiment')
+    if 'wandb_run_name' in experiment:
+        merged.setdefault('logging', {})['wandb_run_name'] = experiment['wandb_run_name']
+    else:
+        merged.setdefault('logging', {})['wandb_run_name'] = experiment.get('name', 'dpo_experiment')
+    
+    if 'wandb_project' in experiment:
+        merged.setdefault('logging', {})['wandb_project'] = experiment['wandb_project']
     
     return merged
 

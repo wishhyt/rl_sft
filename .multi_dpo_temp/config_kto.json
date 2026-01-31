@@ -24,12 +24,15 @@
   },
   "sampling": {
     "train_batch_size": 32,
-    "resolution": 512
+    "resolution": 512,
+    "num_validation_images": 20
   },
   "run": {
     "output_dir": "logs/multi_dpo/kto",
     "num_epochs": 10000,
-    "save_freq": 40,
+    "save_freq": 20,
+    "eval_freq": 20,
+    "resume_from": "logs/multi_dpo/kto/checkpoints/epoch_2840",
     "eval_output_dir": "logs/multi_dpo/kto/eval"
   },
   "logging": {

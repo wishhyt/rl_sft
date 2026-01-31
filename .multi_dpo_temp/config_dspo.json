@@ -18,9 +18,7 @@
   },
   "dpo": {
     "beta_dpo": 5000.0,
-    "train_method": "sdpo",
-    "sdpo_mu": 0.1,
-    "sdpo_alpha": 1.0
+    "train_method": "dspo"
   },
   "sampling": {
     "train_batch_size": 8,
@@ -28,16 +26,16 @@
     "num_validation_images": 20
   },
   "run": {
-    "output_dir": "logs/benchmark_dpo/sdpo",
+    "output_dir": "logs/benchmark_dpo/dspo",
     "num_epochs": 4000,
     "save_freq": 40,
     "eval_freq": 40,
-    "eval_output_dir": "logs/benchmark_dpo/sdpo/eval"
+    "eval_output_dir": "logs/benchmark_dpo/dspo/eval"
   },
   "logging": {
     "use_wandb": true,
     "wandb_project": "dpo-benchmark",
-    "wandb_run_name": "sdpo-b5000-mu0.1"
+    "wandb_run_name": "dspo-b5000"
   },
   "precision": {
     "mixed_precision": "bf16"
