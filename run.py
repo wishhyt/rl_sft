@@ -63,7 +63,7 @@ def main() -> None:
 def _run_training_entrypoint() -> None:
     root = Path(__file__).resolve().parent
     sys.path.insert(0, str(root / "src"))
-    from rl_sft.train import main as _main
+    from aligndiff.train import main as _main
     _main()
 
 
@@ -73,4 +73,3 @@ def notLauncherArgsArePresent(args):
 
 if __name__ == "__main__":
     main()
-

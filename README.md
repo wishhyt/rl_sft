@@ -1,11 +1,11 @@
-﻿# rl_sft: Advanced Stable Diffusion Training Framework
+﻿# AlignDiff: Advanced Stable Diffusion Training Framework
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
-**rl_sft** is a high-performance, modular training framework for **Stable Diffusion (SD1.4/1.5)**. It unifies state-of-the-art alignment techniques, allowing researchers and developers to fine-tune generative models using:
+**AlignDiff** is a high-performance, modular training framework for **Stable Diffusion (SD1.4/1.5)**. It unifies state-of-the-art alignment techniques, allowing researchers and developers to fine-tune generative models using:
 
 -   🎯 **Supervised Fine-Tuning (SFT)**: High-fidelity training with ground-truth data.
 -   ⚖️ **Group Relative Policy Optimization (GRPO)**: Online reinforcement learning with group-based advantage normalization.
@@ -64,8 +64,8 @@ Ensure you have **Python 3.10+** and a CUDA-capable GPU.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/rl_sft.git
-cd rl_sft
+git clone https://github.com/your-username/AlignDiff.git
+cd AlignDiff
 
 # Install dependencies
 pip install torch diffusers accelerate transformers webdataset bitsandbytes wandb
@@ -134,12 +134,12 @@ python run.py --config configs/dpo_pickapic.json \
 ## 📂 Project Structure
 
 ```text
-rl_sft/
+AlignDiff/
 ├── configs/               # JSON Configuration files
 ├── docs/
 │   └── assets/            # Project diagrams and assets
 ├── src/
-│   └── rl_sft/
+│   └── aligndiff/
 │       ├── config.py      # Centralized configuration dataclasses
 │       ├── train.py       # Training entry point
 │       ├── trainer.py     # Main training loops (SFT, DPO, GRPO)

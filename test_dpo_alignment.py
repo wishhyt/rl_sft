@@ -5,12 +5,18 @@ DPO训练对齐验证测试脚本
 """
 import sys
 import ast
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent
+SRC_DIR = ROOT_DIR / "src"
+TRAINER_FILE = SRC_DIR / "aligndiff" / "trainer.py"
+CONFIG_FILE = ROOT_DIR / "configs" / "dpo_pickapic.json"
 
 def test_syntax():
     """测试trainer.py语法"""
     print("\n=== 测试 trainer.py 语法 ===")
     try:
-        with open(r'd:\exp_mix_codex\rl_sft\src\rl_sft\trainer.py', encoding='utf-8') as f:
+        with TRAINER_FILE.open(encoding='utf-8') as f:
             ast.parse(f.read())
         print("✅ trainer.py 语法检查通过")
         return True
@@ -22,8 +28,10 @@ def test_dpo_losses():
     """测试dpo_losses.py模块"""
     print("\n=== 测试 dpo_losses.py 模块 ===")
     try:
-        sys.path.insert(0, r'd:\exp_mix_codex\rl_sft\src')
-        from rl_sft import dpo_losses
+        src_path = str(SRC_DIR)
+        if src_path not in sys.path:
+            sys.path.insert(0, src_path)
+        from aligndiff import dpo_losses
         
         # 检查所有loss函数是否存在
         expected_losses = ['diffusion-dpo', 'dspo', 'dmpo', 'sdpo', 'kto']
@@ -55,7 +63,7 @@ def test_config():
     print("\n=== 测试配置文件 ===")
     try:
         import json
-        with open(r'd:\exp_mix_codex\rl_sft\configs\dpo_pickapic.json', encoding='utf-8') as f:
+        with CONFIG_FILE.open(encoding='utf-8') as f:
             config = json.load(f)
         
         beta_dpo = config.get('dpo', {}).get('beta_dpo')

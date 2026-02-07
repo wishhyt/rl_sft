@@ -96,7 +96,7 @@ def build_reward_fn(config, device) -> Callable:
 
     score_dict = config.reward.weights
     
-    # Handle geneval2 separately if it's in rl_sft scope
+    # Handle geneval2 separately if it's in AlignDiff scope
     custom_fns = {}
     if "geneval2" in score_dict:
         custom_fns["geneval2"] = geneval2_score_local(device)
@@ -146,4 +146,3 @@ def build_reward_fn(config, device) -> Callable:
         return all_score_details
 
     return _fn
-
